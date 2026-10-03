@@ -4,7 +4,42 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const express = require('express');
+const { IncomingMessage, ServerResponse } = require('node:http');
+const { Duplex } = require('node:stream');
 const { mountFrontend } = require('../src/services/frontendService');
+
+function request(app, url, accept = 'text/html') {
+    // Exercise Express and static file streaming without opening a TCP port in the build container.
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        const socket = new Duplex({
+            read() {},
+            write(chunk, encoding, callback) {
+                chunks.push(Buffer.from(chunk));
+                callback();
+            }
+        });
+        const req = new IncomingMessage(socket);
+        req.method = 'GET';
+        req.url = url;
+        req.headers = { accept, connection: 'close' };
+        const res = new ServerResponse(req);
+        res.assignSocket(socket);
+        res.once('error', reject);
+        socket.once('error', reject);
+        res.once('finish', () => {
+            const output = Buffer.concat(chunks).toString();
+            resolve({
+                status: res.statusCode,
+                contentType: res.getHeader('Content-Type'),
+                cacheControl: res.getHeader('Cache-Control'),
+                body: output.slice(output.indexOf('\r\n\r\n') + 4)
+            });
+            socket.destroy();
+        });
+        app.handle(req, res);
+    });
+}
 
 test('production deployment serves frontend routes without swallowing API or file errors', async (t) => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'quotation-frontend-'));
@@ -17,29 +52,23 @@ test('production deployment serves frontend routes without swallowing API or fil
     app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
     mountFrontend(app, directory, true);
     app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
-    const server = app.listen(0, '127.0.0.1');
-    await new Promise((resolve) => server.once('listening', resolve));
-    t.after(() => new Promise((resolve, reject) => {
-        server.close((error) => error ? reject(error) : resolve());
-        server.closeAllConnections();
-    }));
-    const base = `http://127.0.0.1:${server.address().port}`;
-
     for (const route of ['/', '/login', '/quotations/7', '/settings/activity-log']) {
-        const response = await fetch(`${base}${route}`, { headers: { Accept: 'text/html' } });
+        const response = await request(app, route);
         assert.equal(response.status, 200);
-        assert.match(response.headers.get('content-type'), /text\/html/);
-        assert.equal(response.headers.get('cache-control'), 'no-cache');
-        assert.match(await response.text(), /Quotation application/);
+        assert.match(response.contentType, /text\/html/);
+        assert.equal(response.cacheControl, 'no-cache');
+        assert.match(response.body, /Quotation application/);
     }
-    assert.deepEqual(await (await fetch(`${base}/api/health`)).json(), { status: 'ok' });
-    assert.equal((await fetch(`${base}/assets/app.js`)).status, 200);
+    assert.deepEqual(JSON.parse((await request(app, '/api/health')).body), { status: 'ok' });
+    const asset = await request(app, '/assets/app.js');
+    assert.equal(asset.status, 200);
+    assert.equal(asset.body, 'console.log("app");');
     for (const route of ['/api/missing', '/api', '/uploads/missing.png', '/assets/missing.js', '/favicon.ico']) {
-        const response = await fetch(`${base}${route}`, { headers: { Accept: 'text/html' } });
+        const response = await request(app, route);
         assert.equal(response.status, 404);
-        assert.deepEqual(await response.json(), { error: 'Route not found' });
+        assert.deepEqual(JSON.parse(response.body), { error: 'Route not found' });
     }
-    assert.equal((await fetch(`${base}/login`, { headers: { Accept: 'application/json' } })).status, 404);
+    assert.equal((await request(app, '/login', 'application/json')).status, 404);
 });
 
 test('production fails explicitly when frontend build is missing', () => {

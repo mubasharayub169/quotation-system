@@ -86,6 +86,8 @@ In the app's **Environment Variables**, set `NODE_ENV=production`, all five `DB_
 
 On each push to `master`, Hostinger installs the root package, runs `build`, then starts/restarts the root entry file. The build installs the backend's production dependencies and frontend build dependencies using their lockfiles, runs backend tests and frontend lint, and creates `frontend/dist`. A failed command stops the build. There is no separate frontend server to start.
 
+Frontend-serving regression tests exercise Express and file responses in memory, without listening on a local TCP port, so they can run in restricted hosting build environments.
+
 The entry file starts the existing backend from its own directory, retaining local `.env` and relative-path behavior. Express serves `frontend/dist` and falls back to `index.html` for client routes such as `/login` and `/quotations/7`. Missing API endpoints, upload files, and assets still return 404, not the frontend HTML. Production startup fails explicitly if the frontend build is missing.
 
 After the first deployment:
