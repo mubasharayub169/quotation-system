@@ -15,6 +15,7 @@ const emptyItem = () => ({
     unit_price: 0,
     discount_percent: 0,
     iva_percent: 21,
+    manual_entry: true,
 });
 
 export default function QuotationForm() {
@@ -34,7 +35,7 @@ export default function QuotationForm() {
         valid_days: 30,
         transport_charge: 0,
         observations: '',
-        items: [emptyItem()],
+        items: [],
     });
 
     const loadCustomers = useCallback(async () => {
@@ -110,10 +111,6 @@ export default function QuotationForm() {
     };
 
     const removeItem = (index) => {
-        if (formData.items.length === 1) {
-            alert('At least one item is required');
-            return;
-        }
         const newItems = formData.items.filter((_, i) => i !== index);
         setFormData({ ...formData, items: newItems });
     };
@@ -213,6 +210,10 @@ export default function QuotationForm() {
             return;
         }
 
+        if (formData.items.length === 0) {
+            setError('Add at least one saved product or manual item');
+            return;
+        }
         const invalidItems = formData.items.some(
             (item) => !item.description.trim() || parseFloat(item.quantity) <= 0
         );
@@ -389,11 +390,16 @@ export default function QuotationForm() {
                             onClick={addItem}
                             className="btn btn-secondary btn-sm"
                         >
-                            <Plus size={15} /> Add Item
+                            <Plus size={15} /> Add manual item
                         </button>
                     </div>
 
-                    <div className="space-y-4">
+                    <ProductPicker onSelect={(product) => setFormData((current) => ({
+                        ...current,
+                        items: [...current.items, { ...applyProduct(emptyItem(), product), manual_entry: false }],
+                    }))} />
+                    {formData.items.length === 0 && <p className="text-sm text-ink-500 mb-3">No items yet. Add a saved product above to start your quotation.</p>}
+                    <div className="space-y-3">
                         {formData.items.map((item, index) => {
                             const calc = calculateItem(item);
                             return (
@@ -402,10 +408,10 @@ export default function QuotationForm() {
                                     className="border border-ink-200 rounded-lg p-4 bg-ink-50"
                                 >
                                     <div className="flex justify-between items-center mb-3">
-                                        <span className="text-xs font-semibold text-slate-500 uppercase">
-                                            Item #{index + 1}
-                                        </span>
-                                        {formData.items.length > 1 && (
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-ink-900 whitespace-pre-wrap">{item.description || 'Manual item'}</p>
+                                            <p className="text-xs text-ink-500">{item.article_code || 'No code'} · {item.unit_type} · IVA {item.iva_percent}%</p>
+                                        </div>
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(index)}
@@ -413,15 +419,25 @@ export default function QuotationForm() {
                                             >
                                                 ✕ Remove
                                             </button>
-                                        )}
                                     </div>
 
-                                    <ProductPicker onSelect={(product) => setFormData((current) => ({
-                                        ...current,
-                                        items: current.items.map((entry, itemIndex) => (
-                                            itemIndex === index ? applyProduct(entry, product) : entry
-                                        )),
-                                    }))} />
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+                                        {[
+                                            ['quantity', 'Quantity', '0.01', undefined],
+                                            ['unit_price', 'Unit price', '0', undefined],
+                                            ['discount_percent', 'Discount %', '0', '100'],
+                                        ].map(([field, label, min, max]) => (
+                                            <label key={field} className="text-xs text-ink-600">
+                                                {label}
+                                                <input aria-label={`${label} for item ${index + 1}`} type="number" step="0.01" min={min} max={max}
+                                                    value={item[field]} onChange={(e) => handleItemChange(index, field, e.target.value)}
+                                                    className="block w-full mt-1 border border-ink-200 rounded px-2 py-1.5 text-sm" />
+                                            </label>
+                                        ))}
+                                        <div className="text-xs text-ink-600">Line total<p className="font-bold text-primary-800 text-sm mt-2">{fmt(calc.lineTotal)} €</p></div>
+                                    </div>
+                                    <details open={item.manual_entry}>
+                                        <summary className="cursor-pointer text-xs font-medium text-primary-700 mb-2">Edit item details / manual entry</summary>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -579,6 +595,7 @@ export default function QuotationForm() {
                                         </div>
                                     </div>
 
+                                    </details>
                                     <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                                         <div className="text-slate-500">
                                             Subtotal:{' '}

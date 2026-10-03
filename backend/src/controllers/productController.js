@@ -11,8 +11,14 @@ exports.getAll = async (req, res) => {
         return res.status(400).json({ error: 'Invalid product search or pagination' });
     }
     try {
-        const where = 'business_id = ? AND (description LIKE ? OR article_code LIKE ?)';
-        const params = [req.user.businessId, `%${search}%`, `%${search}%`];
+        const terms = search.trim().split(/\s+/).filter(Boolean);
+        const where = ['business_id = ?', ...terms.map(() =>
+            "(description LIKE ? ESCAPE '!' OR article_code LIKE ? ESCAPE '!')"
+        )].join(' AND ');
+        const params = [req.user.businessId, ...terms.flatMap((term) => {
+            const match = `%${term.replace(/[!%_]/g, '!$&')}%`;
+            return [match, match];
+        })];
         const [rows] = await db.query(
             `SELECT * FROM products WHERE ${where} ORDER BY description, id LIMIT ? OFFSET ?`,
             [...params, Number(limit), (Number(page) - 1) * Number(limit)]

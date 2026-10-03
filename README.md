@@ -54,7 +54,9 @@ For an existing installation, back up the database and apply `backend/migrations
 
 Owners can add, edit, and delete entries from **Products** in the sidebar. Each product stores an optional article code, description, unit, unit price (EUR), and IVA rate (21%, 10%, or 4%). Staff can view the catalog and use it in quotations, but cannot modify it. Each business sees only its own products.
 
-In each quotation item, search the **Saved product** picker by code or description and select a result to copy its details into the item. Quantity and discount are preserved, and all copied fields remain editable. Manual quotation items still work. Products are copied as document snapshots: later product edits or deletion never change existing quotations, invoices, or PDFs.
+Quotation entry prioritizes saved products: use **Search saved products** and click **Add to quotation** beside a result. Search matches every entered word across article code and description, ignores surrounding/repeated whitespace, and treats `%`/`_` as literal characters. Results include price, unit and IVA, with pagination so products beyond the first page remain accessible. Each click adds an independent item with quantity 1 and discount 0.
+
+Added items show compact quantity, price, discount and line-total controls. Expand **Edit item details / manual entry** to change code, description, unit or IVA. Use **Add manual item** only when a product is not in the catalog; its details open automatically. All copied fields remain editable. Products are copied as document snapshots: later product edits or deletion never change existing quotations, invoices, or PDFs.
 
 Existing installations must apply `backend/migrations/002_add_products.sql` once before deploying this feature. It creates a new table without changing existing documents. Fresh installations get the same table from `schema/schema.sql`. Do not re-import the initial schema into a live database or re-run a migration already applied.
 

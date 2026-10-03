@@ -122,6 +122,21 @@ test('search and counts share tenant/search filters with bounded pagination', as
     }
 });
 
+test('product search trims words, matches each word across code/description and escapes wildcard characters', async () => {
+    handler = async (sql) => sql.includes('COUNT(*)') ? [[{ total: 0 }]] : [[]];
+    const req = request();
+    req.query = { search: '  P-1   motor%_!  ' };
+    await controller.getAll(req, response());
+    assert.deepEqual(calls[0].params, [4, '%P-1%', '%P-1%', '%motor!%!_!!%', '%motor!%!_!!%', 50, 0]);
+    assert.equal(calls[0].sql.includes("ESCAPE '!'"), true);
+    assert.equal(calls[0].sql.match(/description LIKE/g).length, 2);
+    assert.deepEqual(calls[1].params, calls[0].params.slice(0, -2));
+    calls = [];
+    req.query = { search: '   ' };
+    await controller.getAll(req, response());
+    assert.deepEqual(calls[0].params, [4, 50, 0]);
+});
+
 test('owner-only management rejects staff and business reads reject superadmins', () => {
     const req = request();
     req.user.role = 'staff';
