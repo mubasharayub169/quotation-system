@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Presupuesto</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #243447;
+            line-height: 1.45;
+        }
+
+        /* ============================================
+           HEADER
+           ============================================ */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            background: #ffffff;
+            color: #243447;
+            padding: 0 0 14px;
+            border-bottom: 2px solid #1e40af;
+        }
+
+        .header-left {
+            flex: 1;
+            padding-right: 20px;
+        }
+
+        .company-logo-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .company-logo {
+            max-height: 54px;
+            max-width: 145px;
+            margin-right: 12px;
+            object-fit: contain;
+            background: #ffffff;
+        }
+
+        .company-name {
+            font-size: 19px;
+            font-weight: bold;
+            color: #142b42;
+            letter-spacing: 0;
+        }
+
+        .doc-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1e40af;
+            letter-spacing: 0;
+            margin-bottom: 9px;
+            display: inline-block;
+        }
+
+        .company-box {
+            border: 0;
+            padding: 0;
+            font-size: 9.5px;
+            line-height: 1.5;
+            max-width: 340px;
+            color: #64748b;
+        }
+
+        .company-box strong {
+            font-size: 10.5px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2px;
+            color: #334155;
+        }
+
+        /* ============================================
+           HEADER RIGHT
+           ============================================ */
+        .header-right {
+            width: 39%;
+        }
+
+        .right-top-box {
+            border: 0;
+            height: auto;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            background: transparent;
+            color: #64748b;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .doc-info-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #dbe3eb;
+        }
+
+        .doc-info-table td {
+            border: 1px solid #dbe3eb;
+            padding: 6px 5px;
+            text-align: center;
+            font-size: 9px;
+            color: #334155;
+        }
+
+        .doc-info-table .label {
+            font-weight: bold;
+            background: #eef3f8;
+            font-size: 8px;
+            letter-spacing: 0.4px;
+            color: #64748b;
+        }
+
+        .doc-info-table .value {
+            font-weight: bold;
+            font-size: 10px;
+            background: #ffffff;
+        }
+
+        /* ============================================
+           GOLD BAR
+           ============================================ */
+        .gold-bar {
+            height: 2px;
+            background: #dce6f1;
+            margin: 12px 0;
+        }
+
+        /* ============================================
+           CUSTOMER SECTION
+           ============================================ */
+        .customer-section {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 12px 14px;
+            background: #f5f8fb;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #1e40af;
+        }
+
+        .customer-info {
+            flex: 1;
+        }
+
+        .customer-info .section-label {
+            font-size: 8px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #1e40af;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #cbd5e1;
+            display: inline-block;
+        }
+
+        .customer-info .customer-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #142b42;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .customer-info .customer-line {
+            font-size: 9.5px;
+            color: #334155;
+            line-height: 1.5;
+        }
+
+        .customer-info .customer-line strong {
+            color: #0f2b5c;
+        }
+
+        .customer-meta {
+            min-width: 205px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-left: 15px;
+            border-left: 1px solid #dbe3eb;
+        }
+
+        .customer-meta .meta-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9.5px;
+            gap: 10px;
+        }
+
+        .customer-meta .meta-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .customer-meta .meta-value {
+            color: #142b42;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        /* ============================================
+           ITEMS TABLE
+           ============================================ */
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 9px;
+            border: 1px solid #dbe3eb;
+        }
+
+        table.items thead {
+            background: #eaf0f6;
+            color: #243447;
+        }
+
+        table.items th {
+            border: none;
+            padding: 8px 5px;
+            font-weight: bold;
+            font-size: 8.5px;
+            text-align: center;
+            letter-spacing: 0.5px;
+            color: #334155;
+            text-transform: uppercase;
+        }
+
+        table.items td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 6px;
+            font-size: 9.5px;
+            vertical-align: top;
+            color: #334155;
+        }
+
+        table.items tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        table.items td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        table.items td.center {
+            text-align: center;
+        }
+
+        table.items td.article {
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            font-weight: bold;
+            color: #1e40af;
+        }
+
+        table.items td.desc {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        table.items td.total-cell {
+            font-weight: bold;
+            color: #142b42;
+            font-size: 10px;
+        }
+
+        .empty-space {
+            height: 0;
+        }
+
+        /* ============================================
+           TOTALS ROW
+           ============================================ */
+        table.items tfoot td {
+            background: #f5f8fb;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 10px 6px;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: none;
+            color: #142b42;
+        }
+
+        table.items tfoot td.grand {
+            background: #e7eef8;
+            color: #173b67;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        /* ============================================
+           SUMMARY TABLE (IVA BREAKDOWN)
+           ============================================ */
+        table.summary {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 9px;
+            border: 1px solid #dbe3eb;
+        }
+
+        table.summary thead tr:first-child th {
+            background: #eef3f8;
+            color: #526477;
+            border: none;
+            padding: 7px 3px;
+            font-weight: bold;
+            font-size: 8.5px;
+            text-align: center;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        table.summary td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 7px 6px;
+            font-size: 9.5px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            color: #1a1a1a;
+        }
+
+        table.summary td.center {
+            text-align: center;
+            font-weight: 600;
+            color: #142b42;
+        }
+
+        table.summary tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        /* ============================================
+           OBSERVATIONS + TOTAL BOX
+           ============================================ */
+        .footer-section {
+            margin-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            page-break-inside: avoid;
+        }
+
+        .observations {
+            flex: 1;
+            font-size: 9.5px;
+            line-height: 1.6;
+            background: #f5f8fb;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #1e40af;
+            padding: 10px 12px;
+        }
+
+        .observations .obs-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #1e40af;
+            font-size: 8.5px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .observations .obs-content {
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .total-red-box {
+            background: #eaf0f6;
+            color: #142b42;
+            padding: 12px 18px;
+            text-align: right;
+            min-width: 190px;
+            border-left: 3px solid #1e40af;
+        }
+
+        .total-red-box .total-label {
+            font-size: 9px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            color: #526477;
+        }
+
+        .total-red-box .total-value {
+            font-size: 20px;
+            font-weight: 800;
+            color: #142b42;
+        }
+
+        /* ============================================
+           BANK DETAILS
+           ============================================ */
+        .bank-section {
+            margin-top: 15px;
+            font-size: 9.5px;
+            line-height: 1.7;
+            background: #f5f8fb;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #1e40af;
+            padding: 10px 12px;
+        }
+
+        .bank-section .bank-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #1e40af;
+            font-size: 8.5px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .bank-row {
+            display: flex;
+            padding: 3px 0;
+            align-items: center;
+        }
+
+        .bank-name {
+            font-weight: bold;
+            min-width: 110px;
+            color: #0f2b5c;
+        }
+
+        .bank-iban {
+            font-family: 'Courier New', monospace;
+            font-size: 9.5px;
+            letter-spacing: 0.3px;
+            color: #334155;
+        }
+
+        .items thead,
+        .summary thead {
+            display: table-header-group;
+        }
+
+        .items tr,
+        .summary tr,
+        .customer-section,
+        .footer-section,
+        .bank-section {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================
+         HEADER
+         ============================================ -->
+    <div class="header">
+        <div class="header-left">
+            <div class="company-logo-row">
+                {{#if companyLogo}}
+                    <img src="{{companyLogo}}" class="company-logo" alt="Logo">
+                {{/if}}
+                <div class="company-name">{{companyName}}</div>
+            </div>
+
+            <div class="doc-title">PRESUPUESTO</div>
+
+            <div class="company-box">
+                <strong>{{companyLegalName}}</strong>
+                {{#if companyAddress}}{{companyAddress}}<br>{{/if}}
+                {{#if companyPostalCode}}{{companyPostalCode}} {{/if}}{{companyCity}}{{#if companyProvince}} · {{companyProvince}}{{/if}}<br>
+                {{#if companyNif}}NIF: {{companyNif}}{{/if}}{{#if companyPhone}} · Tel.: {{companyPhone}}{{/if}}
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div class="right-top-box">PROPUESTA COMERCIAL</div>
+            <table class="doc-info-table">
+                <tr>
+                    <td class="label">DOCUMENTO</td>
+                    <td class="label">NÚMERO</td>
+                    <td class="label">FECHA</td>
+                </tr>
+                <tr>
+                    <td class="value">Presupuesto</td>
+                    <td class="value">{{quotationNumber}}</td>
+                    <td class="value">{{quotationDate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="gold-bar"></div>
+
+    <!-- ============================================
+         CUSTOMER SECTION
+         ============================================ -->
+    <div class="customer-section">
+        <div class="customer-info">
+            <div class="section-label">Cliente</div>
+            <div class="customer-name">{{customerName}}</div>
+            {{#if customerNif}}
+            <div class="customer-line"><strong>N.I.F.:</strong> {{customerNif}}</div>
+            {{/if}}
+            {{#if customerAddress}}
+            <div class="customer-line">{{customerAddress}}</div>
+            {{/if}}
+            {{#if customerPostalCode}}
+            <div class="customer-line">{{customerPostalCode}} {{customerCity}}</div>
+            {{else if customerCity}}
+            <div class="customer-line">{{customerCity}}</div>
+            {{/if}}
+        </div>
+        <div class="customer-meta">
+            {{#if referencePerson}}
+            <div class="meta-row">
+                <span class="meta-label">Persona de contacto:</span>
+                <span class="meta-value">{{referencePerson}}</span>
+            </div>
+            {{/if}}
+            <div class="meta-row">
+                <span class="meta-label">Forma de Pago:</span>
+                <span class="meta-value">{{paymentMethod}}</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Válido Hasta:</span>
+                <span class="meta-value">{{validUntil}}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         ITEMS TABLE
+         ============================================ -->
+    <table class="items">
+        <thead>
+            <tr>
+                <th style="width: 8%;">Artículo</th>
+                <th style="width: 33%;">Descripción</th>
+                <th style="width: 8%;">Cantidad</th>
+                <th style="width: 11%;">Precio Ud.</th>
+                <th style="width: 11%;">Subtotal</th>
+                <th style="width: 8%;">I.V.A.%</th>
+                <th style="width: 10%;">I.V.A.€</th>
+                <th style="width: 11%;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each items}}
+            <tr>
+                <td class="center article">{{this.articleCode}}</td>
+                <td class="desc">{{this.description}}</td>
+                <td class="num center">{{this.quantity}}</td>
+                <td class="num">{{this.unitPrice}} €</td>
+                <td class="num">{{this.subtotal}} €</td>
+                <td class="center">{{this.ivaPercent}}</td>
+                <td class="num">{{this.ivaAmount}} €</td>
+                <td class="num total-cell">{{this.lineTotal}} €</td>
+            </tr>
+            {{/each}}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="text-align: right;">TOTALES</td>
+                <td class="num">{{totalSubtotal}} €</td>
+                <td class="center">—</td>
+                <td class="num">{{totalIva}} €</td>
+                <td class="num grand">{{grandTotal}} €</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- ============================================
+         IVA BREAKDOWN
+         ============================================ -->
+    <table class="summary">
+        <thead>
+            <tr>
+                <th style="width: 20%;">Tipo de IVA</th>
+                <th style="width: 40%;">Base imponible</th>
+                <th style="width: 40%;">Cuota de IVA</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="center">21 %</td>
+                <td>{{iva21Base}} €</td>
+                <td>{{iva21Amount}} €</td>
+            </tr>
+            <tr>
+                <td class="center">10 %</td>
+                <td>{{iva10Base}} €</td>
+                <td>{{iva10Amount}} €</td>
+            </tr>
+            <tr>
+                <td class="center">4 %</td>
+                <td>{{iva4Base}} €</td>
+                <td>{{iva4Amount}} €</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ============================================
+         OBSERVATIONS + TOTAL
+         ============================================ -->
+    <div class="footer-section">
+        <div class="observations">
+            <div class="obs-title">Observaciones</div>
+            <div class="obs-content">{{observations}}</div>
+        </div>
+        <div class="total-red-box">
+            <div class="total-label">Total</div>
+            <div class="total-value">{{grandTotal}} €</div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         BANK DETAILS
+         ============================================ -->
+    {{#if bankName1}}
+    <div class="bank-section">
+        <div class="bank-title">Datos Bancarios</div>
+        <div class="bank-row">
+            <span class="bank-name">{{bankName1}}</span>
+            <span class="bank-iban">{{bankIban1}}</span>
+        </div>
+        {{#if bankName2}}
+        <div class="bank-row">
+            <span class="bank-name">{{bankName2}}</span>
+            <span class="bank-iban">{{bankIban2}}</span>
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
+
+</body>
+</html>
