@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('node:path');
+const { mountFrontend } = require('./src/services/frontendService');
 require('dotenv').config();
 
 const app = express();
@@ -24,7 +26,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ✅ Static files (uploads + generated PDFs)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -43,6 +45,8 @@ app.use('/api/invoices', require('./src/routes/invoiceRoutes'));
 app.use('/api/pdf', require('./src/routes/pdfRoutes'));
 app.use('/api/business', require('./src/routes/businessRoutes'));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
+
+mountFrontend(app, path.join(__dirname, '../frontend/dist'), process.env.NODE_ENV === 'production');
 
 // Error handler
 app.use(require('./src/middleware/errorHandler'));

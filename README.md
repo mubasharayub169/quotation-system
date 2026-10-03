@@ -61,7 +61,54 @@ The backend reads these values from `backend/.env`:
 | `JWT_SECRET` | Private signing key for authentication tokens |
 | `JWT_EXPIRES_IN` | Token lifetime; defaults to `8h` |
 
-Do not commit `.env` files, database credentials, or uploaded/generated files. For production, use a strong private JWT secret, HTTPS, backups, and a reverse proxy. Update the API CORS allowlist in `backend/server.js` to match the production frontend origin.
+Do not commit `.env` files, database credentials, or uploaded/generated files. For production, use a strong private JWT secret, HTTPS, and backups. The deployment below serves the frontend and API from the same origin, so no production CORS allowlist change is needed.
+
+## Hostinger Git deployment (frontend and backend together)
+
+Use **Node.js Web App / Import Git repository**, not the generic Git feature that only copies files to `public_html`. One Node.js process serves the built React frontend, `/api`, and `/uploads` on the site's domain.
+
+Configure these settings once in hPanel:
+
+| Setting | Value |
+|---|---|
+| Repository | `mubasharayub169/quotation-system` |
+| Branch | `master` |
+| Framework preset | **Other** (server application, not React/static) |
+| Node.js version | **24** |
+| Root directory | `/` (repository root, not `backend` or `frontend`) |
+| Package manager | npm |
+| Build script | `build` (select the npm script; if the field expects a command, use `npm run build`) |
+| Entry file | `server.js` |
+| Output directory | Leave empty; with Other and an entry file it is ignored |
+| Start command, if shown | `npm start` |
+
+In the app's **Environment Variables**, set `NODE_ENV=production`, all five `DB_*` values, `JWT_SECRET`, and optionally `JWT_EXPIRES_IN=8h`. Use your Hostinger database credentials directly in hPanel; do not put them in Git or in frontend environment variables. Let Hostinger provide `PORT`; do not set a conflicting port.
+
+On each push to `master`, Hostinger installs the root package, runs `build`, then starts/restarts the root entry file. The build installs the backend's production dependencies and frontend build dependencies using their lockfiles, runs backend tests and frontend lint, and creates `frontend/dist`. A failed command stops the build. There is no separate frontend server to start.
+
+The entry file starts the existing backend from its own directory, retaining local `.env` and relative-path behavior. Express serves `frontend/dist` and falls back to `index.html` for client routes such as `/login` and `/quotations/7`. Missing API endpoints, upload files, and assets still return 404, not the frontend HTML. Production startup fails explicitly if the frontend build is missing.
+
+After the first deployment:
+
+1. Assign the domain to this Node.js app in hPanel, point its DNS to Hostinger, and enable SSL.
+2. Confirm the app shows **Auto-deployment** and the deployment logs show a successful build.
+3. Open `https://YOUR-DOMAIN/api/health`, then `https://YOUR-DOMAIN/login`.
+4. Log in, refresh a quotation detail URL directly, and test a logo upload and both quotation/invoice PDFs.
+5. Confirm uploaded logos survive a redeployment. `backend/uploads` is runtime data, not in Git: back it up and confirm persistent file storage with Hostinger before client handoff. Do not assume deployment directories preserve uploads.
+
+Puppeteer's browser cache is configured inside `backend/node_modules/.cache/puppeteer` so its installed browser is included with the backend dependencies rather than relying on the build user's home cache. Do not set `PUPPETEER_SKIP_DOWNLOAD=true`. PDF rendering still requires the hosting runtime's Linux Chrome libraries; if PDF logs report missing libraries, have Hostinger confirm Chrome support before delivery. A successful React build alone does not prove PDF support.
+
+Deployments do **not** automatically import the initial schema, run seed scripts, or modify the live database. Apply future database migrations deliberately after a backup. The audit migration already applied to the existing database must not be applied a second time.
+
+For a local rehearsal of the combined deployment:
+
+```powershell
+npm run build
+$env:NODE_ENV = "production"
+npm start
+```
+
+Official Hostinger references: [build settings](https://docs.hostinger.com/node.js/build-settings) and [GitHub auto-deployment](https://docs.hostinger.com/node.js/github).
 
 ## Checks
 
