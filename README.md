@@ -6,6 +6,7 @@ A multi-business quotation and invoicing application. The frontend is a React/Vi
 
 - Separate workspaces for superadmins, business owners, and staff
 - Customer records and customer history
+- Business-specific product catalog; owners manage products and staff can select saved products for quotations
 - Quotations with line-item discounts, Spanish IVA rates, and PDF output
 - Invoices, payment status, and PDF output
 - Business settings, subscription administration, and staff management
@@ -48,6 +49,14 @@ Quotation API validation requires a positive quantity, non-negative unit price a
 Quotation statuses follow `draft → sent → accepted` or `rejected`. Accepted and rejected quotations cannot be moved to another status; duplicate a quotation to restart the workflow. Only accepted quotations can be converted to invoices.
 
 For an existing installation, back up the database and apply `backend/migrations/001_add_audit_business_id.sql` before deploying the activity-log feature. New databases get this column and index from `schema/schema.sql`.
+
+## Saved products
+
+Owners can add, edit, and delete entries from **Products** in the sidebar. Each product stores an optional article code, description, unit, unit price (EUR), and IVA rate (21%, 10%, or 4%). Staff can view the catalog and use it in quotations, but cannot modify it. Each business sees only its own products.
+
+In each quotation item, search the **Saved product** picker by code or description and select a result to copy its details into the item. Quantity and discount are preserved, and all copied fields remain editable. Manual quotation items still work. Products are copied as document snapshots: later product edits or deletion never change existing quotations, invoices, or PDFs.
+
+Existing installations must apply `backend/migrations/002_add_products.sql` once before deploying this feature. It creates a new table without changing existing documents. Fresh installations get the same table from `schema/schema.sql`. Do not re-import the initial schema into a live database or re-run a migration already applied.
 
 ## Configuration
 

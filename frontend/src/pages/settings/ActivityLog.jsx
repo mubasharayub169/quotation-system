@@ -9,6 +9,7 @@ function entrySummary(entry) {
     const reference = data.invoice_number
         || data.quotation_number
         || data.customer_code
+        || data.article_code
         || data.email
         || data.business_name
         || data.name;

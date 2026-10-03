@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Activity, BarChart3, Building2, FileText, ReceiptText, Settings, ShieldCheck, Users, UserRound } from 'lucide-react';
+import { Activity, BarChart3, Building2, FileText, Package, ReceiptText, Settings, ShieldCheck, Users, UserRound } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 
 export default function Sidebar() {
@@ -66,6 +66,10 @@ export default function Sidebar() {
                 {(isOwner() || user?.role === 'staff') && (
                     <>
                         <div className={sectionLabelClass}>Business</div>
+                        <NavLink to="/products" className={linkClass} title="Products" aria-label="Products">
+                            <Package size={18} strokeWidth={1.8} />
+                            <span className="hidden md:inline">Products</span>
+                        </NavLink>
                         <NavLink to="/customers" className={linkClass} title="Customers" aria-label="Customers">
                             <UserRound size={18} strokeWidth={1.8} />
                             <span className="hidden md:inline">Customers</span>

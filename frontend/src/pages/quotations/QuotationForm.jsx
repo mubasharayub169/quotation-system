@@ -2,23 +2,8 @@ import { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calculator, FileText, Package, Plus, Truck } from 'lucide-react';
 import api from '../../api/client';
-
-const UNIT_TYPES = [
-    { value: 'unit', label: 'Unit' },
-    { value: 'hour', label: 'Hour' },
-    { value: 'sqm', label: 'm²' },
-    { value: 'sqft', label: 'ft²' },
-    { value: 'meter', label: 'Meter' },
-    { value: 'kg', label: 'Kg' },
-    { value: 'contract', label: 'Contract' },
-    { value: 'service', label: 'Service' },
-];
-
-const IVA_RATES = [
-    { value: 21, label: '21%' },
-    { value: 10, label: '10%' },
-    { value: 4, label: '4%' },
-];
+import ProductPicker from '../../components/ProductPicker';
+import { applyProduct, IVA_RATES, UNIT_TYPES } from '../../utils/productOptions';
 
 const PAYMENT_METHODS = ['CONTADO', 'TRANSFERENCIA', 'TARJETA', 'CHEQUE'];
 
@@ -431,6 +416,12 @@ export default function QuotationForm() {
                                         )}
                                     </div>
 
+                                    <ProductPicker onSelect={(product) => setFormData((current) => ({
+                                        ...current,
+                                        items: current.items.map((entry, itemIndex) => (
+                                            itemIndex === index ? applyProduct(entry, product) : entry
+                                        )),
+                                    }))} />
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 mb-1">

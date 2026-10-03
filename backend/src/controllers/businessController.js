@@ -11,6 +11,7 @@ function getAuditSummary(entry) {
         'invoice_number',
         'quotation_number',
         'customer_code',
+        'article_code',
         'business_name',
         'name',
         'status',

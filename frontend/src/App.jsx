@@ -13,6 +13,7 @@ const StaffList = lazy(() => import('./pages/settings/StaffList'));
 const BusinessProfile = lazy(() => import('./pages/settings/BusinessProfile'));
 const ActivityLog = lazy(() => import('./pages/settings/ActivityLog'));
 const CustomerList = lazy(() => import('./pages/customers/CustomerList'));
+const ProductList = lazy(() => import('./pages/products/ProductList'));
 const CustomerForm = lazy(() => import('./pages/customers/CustomerForm'));
 const CustomerDetail = lazy(() => import('./pages/customers/CustomerDetail'));
 const QuotationList = lazy(() => import('./pages/quotations/QuotationList'));
@@ -69,6 +70,11 @@ function App() {
                 }
             >
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/products" element={
+                    <ProtectedRoute allowedRoles={BUSINESS_ROLES}>
+                        <ProductList />
+                    </ProtectedRoute>
+                } />
 
                 {/* ============================================
                     SUPER ADMIN — Businesses
