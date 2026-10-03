@@ -14,6 +14,7 @@
 /backend/uploads/
 /backend/generated-pdfs/
 /backend/seed-data.js
+/backend/backend.zip
 /Quotation-System-Client-Delivery.zip
 **/*.log
 npm-debug.log*
