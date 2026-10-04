@@ -2,9 +2,27 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const auditService = require('../services/auditService');
 
+/**
+ * Safe JSON parser — handles both string and object inputs
+ * MySQL JSON type returns object, LONGTEXT returns string
+ */
+function safeJsonParse(value) {
+    if (!value) return null;
+    if (typeof value === 'object') return value; // Already parsed by mysql2
+    if (typeof value === 'string') {
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            console.warn('Invalid JSON:', value);
+            return null;
+        }
+    }
+    return null;
+}
+
 function getAuditSummary(entry) {
     const rawData = entry.new_data || entry.old_data;
-    const data = rawData ? JSON.parse(rawData) : {};
+    const data = safeJsonParse(rawData) || {};
 
     const summary = {};
     for (const key of [
@@ -31,9 +49,23 @@ function getAuditSummary(entry) {
     return summary;
 }
 
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
 exports.getAuditLog = async (req, res) => {
     try {
         const { businessId } = req.user;
+
+        // ✅ Super Admin has no business — return empty
+        if (!businessId) {
+            return res.json({
+                data: [],
+                pagination: { page: 1, limit: 50, total: 0 },
+                message: 'Activity log is only available for businesses'
+            });
+        }
+
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
         const offset = (page - 1) * limit;
@@ -49,10 +81,12 @@ exports.getAuditLog = async (req, res) => {
              LIMIT ? OFFSET ?`,
             [businessId, businessId, limit, offset]
         );
+
         const entries = rows.map(({ old_data, new_data, ...entry }) => ({
             ...entry,
             summary: getAuditSummary({ old_data, new_data })
         }));
+
         const [count] = await db.query(
             `SELECT COUNT(*) AS total
              FROM audit_log a
@@ -66,10 +100,18 @@ exports.getAuditLog = async (req, res) => {
             pagination: { page, limit, total: count[0].total }
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to load activity log' });
+        console.error('❌ Activity Log Error:', error);
+        console.error(error.stack);
+        res.status(500).json({
+            error: 'Failed to load activity log',
+            details: error.message
+        });
     }
 };
+
+// ============================================
+// BUSINESS INFO
+// ============================================
 
 /**
  * GET /api/business/me
@@ -137,6 +179,7 @@ exports.updateSettings = async (req, res) => {
             `UPDATE businesses SET ${updates.join(', ')} WHERE id = ?`,
             values
         );
+
         await auditService.log(req, {
             action: 'settings_update',
             tableName: 'businesses',
@@ -233,6 +276,7 @@ exports.addUser = async (req, res) => {
              VALUES (?, ?, ?, ?, 'staff', 1)`,
             [businessId, full_name.trim(), email.toLowerCase().trim(), hash]
         );
+
         await auditService.log(req, {
             action: 'create',
             tableName: 'users',
@@ -293,6 +337,7 @@ exports.toggleUser = async (req, res) => {
             'UPDATE users SET is_active = ? WHERE id = ?',
             [is_active ? 1 : 0, id]
         );
+
         await auditService.log(req, {
             action: is_active ? 'activate' : 'deactivate',
             tableName: 'users',
@@ -358,6 +403,7 @@ exports.resetUserPassword = async (req, res) => {
             'UPDATE users SET password_hash = ? WHERE id = ?',
             [hash, id]
         );
+
         await auditService.log(req, {
             action: 'password_reset',
             tableName: 'users',
