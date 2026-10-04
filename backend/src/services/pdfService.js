@@ -1,4 +1,3 @@
-const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 const path = require('path');
 const Handlebars = require('handlebars');
@@ -250,50 +249,52 @@ class PdfService {
     }
 
     /**
-     * Render HTML to PDF using Puppeteer
+     * Render HTML to PDF using PDFShift API
+     * (Replaces Puppeteer - works on Hostinger shared hosting)
      */
     async renderPdf(html, label = 'PDF') {
-        const browser = await puppeteer.launch({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu'
-            ]
-        });
+        const apiKey = process.env.PDFSHIFT_API_KEY;
 
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1240, height: 1754 });
+        if (!apiKey) {
+            throw new Error('PDFSHIFT_API_KEY is not configured in environment variables');
+        }
 
-        await page.setContent(html, {
-            waitUntil: 'domcontentloaded',
-            timeout: 30000
-        });
+        console.log(`📄 Generating ${label} PDF via PDFShift...`);
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey,
+                },
+                body: JSON.stringify({
+                    source: html,
+                    landscape: false,
+                    use_print: true,  // Keeps background colors and styling
+                }),
+            });
 
-        const pdfData = await page.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '12mm', right: '12mm', bottom: '12mm', left: '12mm' },
-            preferCSSPageSize: false
-        });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`PDFShift API error (${response.status}): ${errorText}`);
+            }
 
-        console.log(`📄 ${label} PDF generated:`, pdfData.length, 'bytes');
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
 
-        await browser.close();
+            console.log(`📦 ${label} Buffer ready:`, buffer.length, 'bytes');
 
-        const buffer = Buffer.isBuffer(pdfData) ? pdfData : Buffer.from(pdfData);
+            return buffer;
 
-        console.log(`📦 ${label} Buffer ready:`, buffer.length, 'bytes');
-
-        return buffer;
+        } catch (error) {
+            console.error(`❌ ${label} PDF Error:`, error.message);
+            throw error;
+        }
     }
 
     /**
-     * Convert logo file to base64 data URI
+     * Convert logo file to base64 data URI (with safe fallback)
      */
     async getLogoBase64(logoPath) {
         if (!logoPath) return null;
@@ -309,7 +310,8 @@ class PdfService {
                 'image/png';
             return `data:${mimeType};base64,${logoBuffer.toString('base64')}`;
         } catch (error) {
-            console.error('❌ Logo load failed:', error.message);
+            // ✅ Don't crash if logo is missing - just skip it
+            console.warn('⚠️ Logo not found, skipping:', logoPath);
             return null;
         }
     }
