@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const numberService = require('../services/numberService');
 const auditService = require('../services/auditService');
+const documentList = require('../services/documentListService');
 
 /**
  * GET /api/invoices
@@ -8,8 +9,10 @@ const auditService = require('../services/auditService');
 exports.getAll = async (req, res) => {
     try {
         const { businessId } = req.user;
-        const { search = '', payment_status = '', page = 1, limit = 50 } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const filters = documentList.parseFilters(req.query, 'payment_status', ['unpaid', 'partial', 'paid']);
+        if (filters.error) return res.status(400).json({ error: filters.error });
+        const { page, limit } = filters;
+        const filter = documentList.buildFilter('i', 'invoice_date', 'payment_status', businessId, filters);
 
         let query = `
             SELECT i.id, i.invoice_number, i.invoice_date, i.due_date,
@@ -17,29 +20,16 @@ exports.getAll = async (req, res) => {
                    c.id AS customer_id, c.name AS customer_name, c.nif_cif
             FROM invoices i
             JOIN customers c ON i.customer_id = c.id
-            WHERE i.business_id = ?
+            WHERE ${filter.where}
         `;
-        const params = [businessId];
-
-        if (payment_status) {
-            query += ` AND i.payment_status = ?`;
-            params.push(payment_status);
-        }
-
-        if (search) {
-            query += ` AND (i.invoice_number LIKE ? OR c.name LIKE ? OR c.nif_cif LIKE ?)`;
-            const s = `%${search}%`;
-            params.push(s, s, s);
-        }
-
-        query += ` ORDER BY i.created_at DESC LIMIT ? OFFSET ?`;
-        params.push(parseInt(limit), offset);
+        query += ` ORDER BY i.created_at DESC, i.id DESC LIMIT ? OFFSET ?`;
+        const params = [...filter.params, limit, (page - 1) * limit];
 
         const [invoices] = await db.query(query, params);
 
         const [countResult] = await db.query(
-            'SELECT COUNT(*) as total FROM invoices WHERE business_id = ?',
-            [businessId]
+            `SELECT COUNT(*) as total FROM invoices i JOIN customers c ON i.customer_id = c.id WHERE ${filter.where}`,
+            filter.params
         );
 
         res.json({

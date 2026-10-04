@@ -52,6 +52,8 @@ For an existing installation, back up the database and apply `backend/migrations
 
 ## Saved products
 
+Quotation and invoice lists show 10 rows per page with Previous/Next controls. **From date** and **To date** filter the quotation date or invoice date respectively, including both boundary dates. Either date may be left empty. Search, status and date filters combine, reset to page 1 when changed, and totals reflect only matching documents.
+
 Owners can add, edit, and delete entries from **Products** in the sidebar. Each product stores an optional article code, description, unit, unit price (EUR), and IVA rate (21%, 10%, or 4%). Staff can view the catalog and use it in quotations, but cannot modify it. Each business sees only its own products.
 
 Quotation entry prioritizes saved products: use **Search saved products** and click **Add to quotation** beside a result. Search matches every entered word across article code and description, ignores surrounding/repeated whitespace, and treats `%`/`_` as literal characters. Results include price, unit and IVA, with pagination so products beyond the first page remain accessible. Each click adds an independent item with quantity 1 and discount 0.

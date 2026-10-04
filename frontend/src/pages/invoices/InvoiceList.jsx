@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Search } from 'lucide-react';
 import api from '../../api/client';
+import { DateFilters, DocumentPagination } from '../../components/DocumentListControls';
 
 export default function InvoiceList() {
     const [invoices, setInvoices] = useState([]);
@@ -10,31 +11,43 @@ export default function InvoiceList() {
     const [search, setSearch] = useState('');
     const [paymentFilter, setPaymentFilter] = useState('');
     const [pagination, setPagination] = useState({ total: 0 });
+    const [page, setPage] = useState(1);
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
-    const loadInvoices = useCallback(async () => {
+    const loadInvoices = useCallback(async (signal) => {
         try {
             setLoading(true);
+            setError('');
             const { data } = await api.get('/invoices', {
+                signal,
                 params: {
                     search,
                     payment_status: paymentFilter,
-                    limit: 100,
+                    limit: 10,
+                    page,
+                    date_from: dateFrom,
+                    date_to: dateTo,
                 },
             });
             setInvoices(data.data);
             setPagination(data.pagination || { total: 0 });
+            const lastPage = Math.max(1, Math.ceil(data.pagination.total / 10));
+            if (page > lastPage) setPage(lastPage);
         } catch (err) {
+            if (signal?.aborted) return;
             setError(err.response?.data?.error || 'Failed to load invoices');
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) setLoading(false);
         }
-    }, [paymentFilter, search]);
+    }, [paymentFilter, search, page, dateFrom, dateTo]);
 
     useEffect(() => {
+        const controller = new AbortController();
         const timer = setTimeout(() => {
-            loadInvoices();
+            loadInvoices(controller.signal);
         }, 300);
-        return () => clearTimeout(timer);
+        return () => { clearTimeout(timer); controller.abort(); };
     }, [loadInvoices]);
 
     const handleDelete = async (id, number) => {
@@ -85,13 +98,13 @@ export default function InvoiceList() {
                             type="text"
                             placeholder="Search by invoice number or customer..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); setLoading(true); }}
                             className="input pl-10"
                         />
                     </div>
                     <select
                         value={paymentFilter}
-                        onChange={(e) => setPaymentFilter(e.target.value)}
+                        onChange={(e) => { setPaymentFilter(e.target.value); setPage(1); setLoading(true); }}
                         className="input md:w-48"
                     >
                         <option value="">All Payment Status</option>
@@ -100,7 +113,10 @@ export default function InvoiceList() {
                         <option value="paid">Paid</option>
                     </select>
                 </div>
-                {!loading && (
+                <DateFilters from={dateFrom} to={dateTo} onChange={(from, to) => {
+                    setDateFrom(from); setDateTo(to); setPage(1); setLoading(true);
+                }} />
+                {!loading && !error && (
                     <p className="text-xs text-ink-500 mt-2">
                         {pagination.total} {pagination.total === 1 ? 'invoice' : 'invoices'} found
                     </p>
@@ -115,7 +131,7 @@ export default function InvoiceList() {
             )}
 
             {/* Table */}
-            {loading ? (
+            {error ? null : loading ? (
                 <div className="workspace-card p-12 text-center text-ink-500">
                     Loading...
                 </div>
@@ -125,11 +141,11 @@ export default function InvoiceList() {
                         <FileText size={22} />
                     </div>
                     <p className="text-sm text-ink-500 mb-4">
-                        {search || paymentFilter
+                        {search || paymentFilter || dateFrom || dateTo
                             ? 'No invoices match your filters'
                             : 'No invoices yet'}
                     </p>
-                    {!search && !paymentFilter && (
+                    {!search && !paymentFilter && !dateFrom && !dateTo && (
                         <p className="text-xs text-ink-400">
                             Create invoices from accepted quotations
                         </p>
@@ -235,6 +251,8 @@ export default function InvoiceList() {
                     </table>
                 </div>
             )}
+            {!error && <DocumentPagination page={page} total={pagination.total} loading={loading}
+                onChange={(next) => { setPage(next); setLoading(true); }} />}
         </div>
     );
 }

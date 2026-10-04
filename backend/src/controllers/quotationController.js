@@ -2,6 +2,7 @@ const db = require('../config/db');
 const calcService = require('../services/calculationService');
 const numberService = require('../services/numberService');
 const auditService = require('../services/auditService');
+const documentList = require('../services/documentListService');
 
 /**
  * GET /api/quotations
@@ -10,8 +11,10 @@ const auditService = require('../services/auditService');
 exports.getAll = async (req, res) => {
     try {
         const { businessId } = req.user;
-        const { search = '', status = '', page = 1, limit = 50 } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const filters = documentList.parseFilters(req.query, 'status', ['draft', 'sent', 'accepted', 'rejected', 'invoiced']);
+        if (filters.error) return res.status(400).json({ error: filters.error });
+        const { page, limit } = filters;
+        const filter = documentList.buildFilter('q', 'quotation_date', 'status', businessId, filters);
 
         let query = `
             SELECT q.id, q.quotation_number, q.quotation_date, q.valid_until,
@@ -19,29 +22,16 @@ exports.getAll = async (req, res) => {
                    c.id AS customer_id, c.name AS customer_name, c.nif_cif
             FROM quotations q
             JOIN customers c ON q.customer_id = c.id
-            WHERE q.business_id = ?
+            WHERE ${filter.where}
         `;
-        const params = [businessId];
-
-        if (status) {
-            query += ` AND q.status = ?`;
-            params.push(status);
-        }
-
-        if (search) {
-            query += ` AND (q.quotation_number LIKE ? OR c.name LIKE ? OR c.nif_cif LIKE ?)`;
-            const s = `%${search}%`;
-            params.push(s, s, s);
-        }
-
-        query += ` ORDER BY q.created_at DESC LIMIT ? OFFSET ?`;
-        params.push(parseInt(limit), offset);
+        query += ` ORDER BY q.created_at DESC, q.id DESC LIMIT ? OFFSET ?`;
+        const params = [...filter.params, limit, (page - 1) * limit];
 
         const [quotations] = await db.query(query, params);
 
         const [countResult] = await db.query(
-            'SELECT COUNT(*) as total FROM quotations WHERE business_id = ?',
-            [businessId]
+            `SELECT COUNT(*) as total FROM quotations q JOIN customers c ON q.customer_id = c.id WHERE ${filter.where}`,
+            filter.params
         );
 
         res.json({

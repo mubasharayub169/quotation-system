@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Plus, Search } from 'lucide-react';
 import api from '../../api/client';
+import { DateFilters, DocumentPagination } from '../../components/DocumentListControls';
 
 export default function QuotationList() {
     const [quotations, setQuotations] = useState([]);
@@ -10,31 +11,43 @@ export default function QuotationList() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [pagination, setPagination] = useState({ total: 0 });
+    const [page, setPage] = useState(1);
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
-    const loadQuotations = useCallback(async () => {
+    const loadQuotations = useCallback(async (signal) => {
         try {
             setLoading(true);
+            setError('');
             const { data } = await api.get('/quotations', {
+                signal,
                 params: {
                     search,
                     status: statusFilter,
-                    limit: 100,
+                    limit: 10,
+                    page,
+                    date_from: dateFrom,
+                    date_to: dateTo,
                 },
             });
             setQuotations(data.data);
             setPagination(data.pagination || { total: 0 });
+            const lastPage = Math.max(1, Math.ceil(data.pagination.total / 10));
+            if (page > lastPage) setPage(lastPage);
         } catch (err) {
+            if (signal?.aborted) return;
             setError(err.response?.data?.error || 'Failed to load quotations');
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) setLoading(false);
         }
-    }, [search, statusFilter]);
+    }, [search, statusFilter, page, dateFrom, dateTo]);
 
     useEffect(() => {
+        const controller = new AbortController();
         const timer = setTimeout(() => {
-            loadQuotations();
+            loadQuotations(controller.signal);
         }, 300);
-        return () => clearTimeout(timer);
+        return () => { clearTimeout(timer); controller.abort(); };
     }, [loadQuotations]);
 
     const handleDelete = async (id, number) => {
@@ -96,13 +109,13 @@ export default function QuotationList() {
                             type="text"
                             placeholder="Search by quotation number or customer..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); setLoading(true); }}
                             className="input pl-10"
                         />
                     </div>
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); setLoading(true); }}
                         className="input md:w-48"
                     >
                         <option value="">All Statuses</option>
@@ -113,7 +126,10 @@ export default function QuotationList() {
                         <option value="invoiced">Invoiced</option>
                     </select>
                 </div>
-                {!loading && (
+                <DateFilters from={dateFrom} to={dateTo} onChange={(from, to) => {
+                    setDateFrom(from); setDateTo(to); setPage(1); setLoading(true);
+                }} />
+                {!loading && !error && (
                     <p className="text-xs text-ink-500 mt-2">
                         {pagination.total} quotation{pagination.total !== 1 ? 's' : ''} found
                     </p>
@@ -128,7 +144,7 @@ export default function QuotationList() {
             )}
 
             {/* Table */}
-            {loading ? (
+            {error ? null : loading ? (
                 <div className="bg-white border border-ink-200 rounded-lg shadow-soft p-12 text-center text-ink-500">
                     Loading...
                 </div>
@@ -138,11 +154,11 @@ export default function QuotationList() {
                         <FileText size={22} />
                     </div>
                     <p className="text-ink-500 mb-4">
-                        {search || statusFilter
+                        {search || statusFilter || dateFrom || dateTo
                             ? 'No quotations match your filters'
                             : 'No quotations yet'}
                     </p>
-                    {!search && !statusFilter && (
+                    {!search && !statusFilter && !dateFrom && !dateTo && (
                         <Link
                             to="/quotations/new"
                             className="text-primary-700 hover:text-primary-900 text-sm font-semibold"
@@ -291,6 +307,8 @@ export default function QuotationList() {
                     </table>
                 </div>
             )}
+            {!error && <DocumentPagination page={page} total={pagination.total} loading={loading}
+                onChange={(next) => { setPage(next); setLoading(true); }} />}
         </div>
     );
 }
