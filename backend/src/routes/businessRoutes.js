@@ -11,8 +11,19 @@ router.use(authMiddleware);
 // BUSINESS INFO (Owner + Staff can view)
 // ============================================
 router.get('/me', businessController.getMe);
+
+// ============================================
+// ACTIVITY LOG (Owner only)
+// ============================================
 router.get(
     '/audit-log',
+    roleCheck('owner'),
+    businessController.getAuditLog
+);
+
+// ✅ Alias for frontend
+router.get(
+    '/activity-log',
     roleCheck('owner'),
     businessController.getAuditLog
 );

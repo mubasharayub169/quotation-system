@@ -2,30 +2,42 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure upload folder exists
-const uploadDir = path.join(__dirname, '../../uploads/logos');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Ensure upload folders exist
+const logosDir = path.join(__dirname, '../../uploads/logos');
+const productsDir = path.join(__dirname, '../../uploads/products');
 
-// Storage config
+[logosDir, productsDir].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// ============================================
+// Storage config (destination based on route)
+// ============================================
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir);
+        // If route is product, save to products folder
+        if (req.baseUrl.includes('/products') || req.originalUrl.includes('/products')) {
+            return cb(null, productsDir);
+        }
+        // Default: logos
+        cb(null, logosDir);
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);
-        const businessId = req.params.id || req.user.businessId || 'unknown';
-        const filename = `logo-${businessId}-${Date.now()}${ext}`;
+        const entityId = req.params.id || req.user.businessId || 'unknown';
+        const prefix = req.baseUrl.includes('/products') ? 'product' : 'logo';
+        const filename = `${prefix}-${entityId}-${Date.now()}${ext}`;
         cb(null, filename);
-    }
+    },
 });
 
 // File filter
 const fileFilter = (req, file, cb) => {
     const allowed = [
         'image/png', 'image/jpeg', 'image/jpg',
-        'image/svg+xml', 'image/webp'
+        'image/svg+xml', 'image/webp',
     ];
     if (allowed.includes(file.mimetype)) {
         cb(null, true);
@@ -38,7 +50,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage,
     fileFilter,
-    limits: { fileSize: 2 * 1024 * 1024 }
+    limits: { fileSize: 2 * 1024 * 1024 },
 });
 
 module.exports = upload;
